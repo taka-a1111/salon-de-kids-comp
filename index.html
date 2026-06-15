@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salon de kid's｜デザインカンプ</title>
+<title>NPO法人 Salon de kid's ネット ／ 地域子育て支援センターサロンドキッズ｜奈良県天理市</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
@@ -21,7 +21,7 @@ h1,h2,h3,h4,.disp{font-family:"Zen Maru Gothic",sans-serif}
 img{display:block;max-width:100%}
 a{color:inherit;text-decoration:none}
 .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
-.badge{position:fixed;top:12px;right:12px;z-index:99;background:var(--ink);color:#fff;font-size:11px;letter-spacing:1px;padding:5px 12px;border-radius:30px;font-family:"Zen Maru Gothic";opacity:.85}
+
 
 .btn{display:inline-flex;align-items:center;gap:8px;font-family:"Zen Maru Gothic";font-weight:700;font-size:15px;padding:13px 26px;border-radius:40px;border:none;cursor:pointer;transition:.2s;background:#fff;color:var(--ink)}
 .btn-main{background:var(--pink-deep);color:#fff;box-shadow:0 8px 18px rgba(244,124,154,.35)}
@@ -304,10 +304,6 @@ br.sp{display:none}
 }
 
 @media (max-width:880px){
-  .badge{top:auto !important;bottom:14px !important;right:14px !important;font-size:11px !important;padding:6px 12px !important;opacity:.85}
-}
-
-@media (max-width:880px){
   .hdr .srch-i{order:1;margin-left:auto}
   .hamburger{order:2;margin-left:8px}
 }
@@ -322,11 +318,19 @@ br.sp{display:none}
   .hero-banner-text h1 .mk::after{height:7px;bottom:10%}
   .hero-banner-text .sub{font-size:10.5px;margin-top:8px;line-height:1.6}
 }
+
+.search-results{margin-top:20px;max-width:760px;margin-left:auto;margin-right:auto}
+.search-result-item{padding:14px 18px;background:#fff;border-radius:14px;margin-bottom:10px;cursor:pointer;box-shadow:0 2px 8px rgba(94,74,80,.05);border:1px solid var(--line);transition:transform .15s ease, box-shadow .15s ease}
+.search-result-item:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(94,74,80,.1)}
+.search-result-page{display:inline-block;padding:2px 10px;background:var(--pink-soft);color:var(--pink-deep);font-size:11px;font-weight:700;border-radius:999px;font-family:'Zen Maru Gothic';margin-bottom:6px}
+.search-result-title{font-family:'Zen Maru Gothic';font-weight:700;color:var(--ink);font-size:15px;margin-bottom:4px}
+.search-result-text{font-size:12.5px;color:var(--ink-soft);line-height:1.7}
+.search-result-text mark{background:#FFF1A6;color:var(--ink);padding:0 2px;border-radius:2px}
+.search-empty{padding:30px 20px;text-align:center;color:var(--ink-soft);font-size:14px;background:#fff;border-radius:14px;border:1px dashed var(--line)}
+.search-count{font-size:12px;color:var(--ink-soft);margin-bottom:10px}
 </style>
 </head>
 <body>
-<div class="badge">カンプ（デザイン案）</div>
-
 <header>
   <div class="wrap hdr">
     <div class="brand" data-go="top">
@@ -438,10 +442,11 @@ br.sp{display:none}
     </div>
   </section>
 
-  <section class="sec">
+  <section class="sec" id="search-section">
     <div class="wrap">
       <div class="sechead"><div class="en">SEARCH</div><h2>サイト内<span class="pin">検索</span></h2></div>
-      <div class="searchbar"><input placeholder="気になるキーワードを入力（例：一時預かり）"><button class="btn btn-main btn-sm">検索</button></div>
+      <div class="searchbar"><input id="searchInput" placeholder="気になるキーワードを入力（例：一時預かり）"><button class="btn btn-main btn-sm" id="searchBtn">検索</button></div>
+      <div id="searchResults" class="search-results"></div>
     </div>
   </section>
 
@@ -1011,5 +1016,144 @@ document.querySelectorAll('.amt').forEach(a=>a.addEventListener('click',()=>{a.p
 })();
 </script>
 
+
+<script>
+(function(){
+  const input = document.getElementById('searchInput');
+  const btn = document.getElementById('searchBtn');
+  const results = document.getElementById('searchResults');
+  if(!input || !btn || !results) return;
+
+  // ページタイトル取得
+  function pageTitle(pageId){
+    const titles = {
+      'top':'TOP','svc':'事業案内','news':'お知らせ','book':'予約方法',
+      'faq':'よくある質問','donate':'寄付・賛助会員・協賛',
+      'about':'団体概要・アクセス','events':'これまでのイベント実績',
+      'zaisan':'財産目録','privacy':'プライバシーポリシー','terms':'利用規約'
+    };
+    return titles[pageId] || pageId;
+  }
+
+  // 検索インデックスを動的に作成
+  function buildIndex(){
+    const items = [];
+    document.querySelectorAll('.page').forEach(page => {
+      const pageId = (page.id || '').replace('page-','');
+      // セクション単位で索引化（h2, h3 ごと）
+      const headings = page.querySelectorAll('h2, h3');
+      if(headings.length === 0){
+        // 見出しがなければページ全体
+        items.push({
+          page: pageId,
+          anchor: '',
+          sectionTitle: pageTitle(pageId),
+          text: page.innerText.replace(/\s+/g,' ').trim()
+        });
+        return;
+      }
+      headings.forEach((h, idx) => {
+        const next = headings[idx+1];
+        let text = '';
+        let cur = h.nextElementSibling;
+        const stopEl = next || null;
+        // h2/h3の次から、次のh2/h3まで集める
+        while(cur && cur !== stopEl){
+          if(cur.tagName === 'H2' || cur.tagName === 'H3') break;
+          text += ' ' + (cur.innerText || '');
+          cur = cur.nextElementSibling;
+          // 親をたどる必要があれば
+          if(!cur && h.parentElement){
+            // 同階層尽きたら親の次へ（簡易）
+            break;
+          }
+        }
+        // 見出し直近の親カードからも拾う
+        if(!text && h.closest('.card')){
+          text = h.closest('.card').innerText;
+        }
+        items.push({
+          page: pageId,
+          anchor: h.closest('[id]') && h.closest('[id]').id.startsWith('s') ? h.closest('[id]').id : '',
+          sectionTitle: h.textContent.trim(),
+          text: text.replace(/\s+/g,' ').trim()
+        });
+      });
+    });
+    return items;
+  }
+
+  function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+  function highlight(text, query){
+    const esc = escapeHtml(text);
+    const q = escapeHtml(query);
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');
+    return esc.replace(re, m => '<mark>'+m+'</mark>');
+  }
+
+  function snippet(text, query, len=120){
+    const i = text.toLowerCase().indexOf(query.toLowerCase());
+    if(i < 0) return text.slice(0, len) + (text.length>len?'…':'');
+    const start = Math.max(0, i - 40);
+    const end = Math.min(text.length, i + query.length + 80);
+    return (start>0?'…':'') + text.slice(start, end) + (end<text.length?'…':'');
+  }
+
+  function search(){
+    const q = input.value.trim();
+    if(!q){ results.innerHTML = ''; return; }
+    const idx = buildIndex();
+    const hits = idx.filter(it => 
+      (it.sectionTitle + ' ' + it.text).toLowerCase().includes(q.toLowerCase())
+    );
+    if(hits.length === 0){
+      results.innerHTML = '<div class="search-empty">「'+escapeHtml(q)+'」に該当する内容は見つかりませんでした。</div>';
+      return;
+    }
+    let html = '<div class="search-count">'+hits.length+'件見つかりました</div>';
+    html += hits.map(h => `
+      <div class="search-result-item" data-page="${h.page}" data-anchor="${h.anchor}">
+        <div class="search-result-page">${pageTitle(h.page)}</div>
+        <div class="search-result-title">${highlight(h.sectionTitle, q)}</div>
+        <div class="search-result-text">${highlight(snippet(h.text, q), q)}</div>
+      </div>
+    `).join('');
+    results.innerHTML = html;
+    results.querySelectorAll('.search-result-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const p = el.dataset.page;
+        const a = el.dataset.anchor;
+        if(typeof go === 'function') go(p, a || undefined);
+      });
+    });
+  }
+
+  btn.addEventListener('click', search);
+  input.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); search(); } });
+  // 入力中も検索（軽量）
+  let timer;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(search, 200);
+  });
+
+  // ヘッダーの虫眼鏡（.srch-i）クリック対応
+  document.querySelectorAll('.srch-i').forEach(s => {
+    s.addEventListener('click', e => {
+      e.preventDefault();
+      // TOPページに遷移してから検索セクションへ
+      if(typeof go === 'function') go('top');
+      setTimeout(() => {
+        const section = document.getElementById('search-section');
+        if(section){
+          section.scrollIntoView({behavior:'smooth', block:'start'});
+          setTimeout(() => input.focus(), 400);
+        }
+      }, 100);
+    });
+  });
+})();
+</script>
 </body>
 </html>
